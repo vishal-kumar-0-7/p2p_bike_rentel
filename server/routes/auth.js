@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const pool = require('../db');
+const { isAdminEmail } = require('../utils/admin');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -48,7 +49,8 @@ router.post('/register', [
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        isAdmin: isAdminEmail(user.email)
       }
     });
   } catch (error) {
@@ -94,7 +96,8 @@ router.post('/login', [
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        isAdmin: isAdminEmail(user.email)
       }
     });
   } catch (error) {

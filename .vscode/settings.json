@@ -11,5 +11,6 @@
             "connectionTimeout": 30,
             "password": "190701"
         }
-    ]
+    ],
+    "kiroAgent.configureMCP": "Disabled"
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { isAdminEmail } = require('../utils/admin');
 
 const router = express.Router();
 
@@ -16,7 +17,10 @@ router.get('/profile', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({
+      ...result.rows[0],
+      isAdmin: isAdminEmail(result.rows[0].email)
+    });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -38,6 +42,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
     res.json({
       message: 'Profile updated successfully',
       user: result.rows[0]
+        ? {
+            ...result.rows[0],
+            isAdmin: isAdminEmail(result.rows[0].email)
+          }
+        : null
     });
   } catch (error) {
     console.error('Error updating user profile:', error);
@@ -45,17 +54,33 @@ router.put('/profile', authMiddleware, async (req, res) => {
   }
 });
 
-// Get user's bikes
+// Get user's bikes (must be before /:id to avoid conflict)
 router.get('/my-bikes', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM bikes WHERE owner_id = $1 ORDER BY created_at DESC',
       [req.userId]
     );
-
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching user bikes:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get public user profile by ID (for messaging context)
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, email, phone FROM users WHERE id = $1',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

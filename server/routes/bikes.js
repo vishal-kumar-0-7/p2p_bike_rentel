@@ -8,8 +8,8 @@ const router = express.Router();
 // Get all bikes
 router.get('/', async (req, res) => {
   try {
-    const { location, minPrice, maxPrice, available } = req.query;
-    
+    const { search, location, minPrice, maxPrice, available } = req.query;
+
     let query = `
       SELECT b.*, u.name as owner_name, u.phone as owner_phone 
       FROM bikes b 
@@ -18,6 +18,12 @@ router.get('/', async (req, res) => {
     `;
     const params = [];
     let paramCount = 0;
+
+    if (search) {
+      paramCount++;
+      query += ` AND (b.title ILIKE $${paramCount} OR b.brand ILIKE $${paramCount} OR b.model ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+    }
 
     if (location) {
       paramCount++;
@@ -37,7 +43,7 @@ router.get('/', async (req, res) => {
       params.push(maxPrice);
     }
 
-    if (available !== undefined) {
+    if (available !== undefined && available !== '') {
       paramCount++;
       query += ` AND b.available = $${paramCount}`;
       params.push(available === 'true');
@@ -101,11 +107,15 @@ router.post('/', authMiddleware, [
       image_url
     } = req.body;
 
+    const yearValue = year ? Number(year) : null;
+    const latitudeValue = latitude ? Number(latitude) : null;
+    const longitudeValue = longitude ? Number(longitude) : null;
+
     const result = await pool.query(`
       INSERT INTO bikes (owner_id, title, description, brand, model, year, price_per_day, location, latitude, longitude, image_url)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [req.userId, title, description, brand, model, year, price_per_day, location, latitude, longitude, image_url]);
+    `, [req.userId, title, description, brand, model, yearValue, price_per_day, location, latitudeValue, longitudeValue, image_url]);
 
     res.status(201).json({
       message: 'Bike created successfully',

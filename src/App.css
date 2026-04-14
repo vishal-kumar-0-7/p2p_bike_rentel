@@ -1,38 +1,29 @@
+/* App Layout Styles */
+
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
   min-height: 100vh;
+  background: #f7f9fa;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.main-content {
+  flex: 1;
+  padding-top: 24px;
+  padding-bottom: 32px;
+  min-height: 70vh;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+.loading {
+  text-align: center;
+  color: #4f8cff;
+  font-size: 1.2rem;
+  margin: 48px 0;
+}
+
+@media (max-width: 700px) {
+  .main-content {
+    padding-top: 12px;
+    padding-bottom: 16px;
   }
 }

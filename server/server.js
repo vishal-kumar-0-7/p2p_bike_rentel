@@ -1,10 +1,10 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const pool = require('./db');
 const webhookRoutes = require('./routes/webhooks');
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5050;

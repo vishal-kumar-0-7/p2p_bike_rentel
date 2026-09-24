@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Install client dependencies
-        working-directory: /Users/vishalkumar/Desktop/Test/p2p-bike-rental/client
+        working-directory: client
         run: npm ci
 
       - name: Build client

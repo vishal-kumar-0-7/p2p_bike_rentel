@@ -6,7 +6,7 @@ const pool = require('../db');
 const { isAdminEmail } = require('../utils/admin');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Register user
 router.post('/register', [

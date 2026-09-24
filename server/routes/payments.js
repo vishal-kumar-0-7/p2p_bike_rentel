@@ -143,6 +143,14 @@ router.post('/refund/:bookingId', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to refund this booking' });
     }
 
+    if (booking.status !== 'cancelled') {
+      return res.status(400).json({ error: 'Only cancelled bookings can be refunded' });
+    }
+
+    if (booking.payment_status !== 'captured') {
+      return res.status(400).json({ error: 'This booking has no captured payment to refund, or it was already refunded' });
+    }
+
     const paymentResult = await pool.query(`
       SELECT *
       FROM payments

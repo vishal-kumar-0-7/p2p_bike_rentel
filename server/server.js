@@ -1,6 +1,11 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is not set. Add a long random value to server/.env before starting the server.');
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');

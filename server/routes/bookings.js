@@ -16,6 +16,18 @@ const ACTIVE_BOOKING_STATES = [
   'in_progress'
 ];
 
+// Statuses an owner may move a booking to, keyed by its current status.
+// Paid bookings are confirmed by an admin (POST /api/admin/bookings/:id/approve).
+const OWNER_STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'cancelled'],
+  pending_payment: ['cancelled'],
+  paid_pending_confirmation: ['cancelled'],
+  confirmed: ['in_progress', 'completed', 'cancelled'],
+  in_progress: ['completed'],
+};
+
+const NON_CANCELLABLE_STATES = ['cancelled', 'completed', 'refund_initiated', 'refunded'];
+
 const isMissingColumnError = (error) => /column .* does not exist/i.test(error?.message || '');
 
 router.get('/my-bookings', authMiddleware, async (req, res) => {
@@ -257,6 +269,10 @@ router.post('/:bookingId/payment-order', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'This booking cannot be paid' });
     }
 
+    if (booking.payment_status === 'captured') {
+      return res.status(400).json({ error: 'This booking has already been paid' });
+    }
+
     const amountInPaise = Math.round(Number(booking.total_price) * 100);
     const order = await createOrder({
       amount: amountInPaise,
@@ -335,6 +351,10 @@ router.post('/:bookingId/cancel', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Booking cannot be cancelled after payout transfer' });
     }
 
+    if (NON_CANCELLABLE_STATES.includes(booking.status)) {
+      return res.status(400).json({ error: `A ${booking.status} booking cannot be cancelled` });
+    }
+
     const result = await pool.query(`
       UPDATE bookings
       SET status = 'cancelled',
@@ -405,10 +425,6 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['pending_payment', 'paid_pending_confirmation', 'confirmed', 'in_progress', 'completed', 'cancelled', 'refund_initiated', 'refunded'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
 
     const bookingResult = await pool.query('SELECT * FROM bookings WHERE id = $1', [id]);
     if (bookingResult.rows.length === 0) {
@@ -416,14 +432,23 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
     }
 
     const booking = bookingResult.rows[0];
-    if (booking.owner_id !== req.userId && booking.renter_id !== req.userId) {
-      return res.status(403).json({ error: 'Not authorized to update this booking' });
+    if (booking.owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Only the bike owner can update this booking' });
+    }
+
+    const allowedStatuses = OWNER_STATUS_TRANSITIONS[booking.status] || [];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: `Cannot change a ${booking.status} booking to ${status}` });
     }
 
     const result = await pool.query(`
       UPDATE bookings
       SET status = $1,
-          booking_status = $1,
+          booking_status = CASE
+            WHEN $1 = 'cancelled' AND payment_status = 'captured' THEN 'refund_initiated'
+            ELSE $1
+          END,
+          cancelled_at = CASE WHEN $1 = 'cancelled' THEN CURRENT_TIMESTAMP ELSE cancelled_at END,
           trip_completed_at = CASE WHEN $1 = 'completed' THEN CURRENT_TIMESTAMP ELSE trip_completed_at END,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2

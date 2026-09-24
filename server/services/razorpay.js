@@ -2,9 +2,9 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 const baseURL = process.env.RAZORPAY_API_BASE || 'https://api.razorpay.com/v1';
-const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_Sd5QzoK6shCucc';
-const keySecret = process.env.RAZORPAY_KEY_SECRET || '1jwaO7VBTQz407nnWUf1OTfw';
-const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'Vi@070804';
+const keyId = process.env.RAZORPAY_KEY_ID;
+const keySecret = process.env.RAZORPAY_KEY_SECRET;
+const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
 const api = axios.create({
   baseURL,
@@ -16,6 +16,13 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+const safeEqual = (expected, received) => {
+  if (typeof received !== 'string') return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(received);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
 
 const ensureCredentials = () => {
   if (!keyId || !keySecret) {
@@ -47,7 +54,7 @@ const verifyPaymentSignature = ({ orderId, paymentId, signature }) => {
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
-  return expected === signature;
+  return safeEqual(expected, signature);
 };
 
 const verifyWebhookSignature = ({ rawBody, signature }) => {
@@ -60,7 +67,7 @@ const verifyWebhookSignature = ({ rawBody, signature }) => {
     .update(rawBody)
     .digest('hex');
 
-  return expected === signature;
+  return safeEqual(expected, signature);
 };
 
 const createLinkedAccount = async (payload) => {

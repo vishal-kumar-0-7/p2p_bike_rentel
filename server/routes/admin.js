@@ -79,7 +79,7 @@ router.get('/dashboard', async (req, res) => {
           COUNT(*)::int AS total_payments,
           COALESCE(SUM(amount), 0)::numeric(10,2) AS total_revenue
         FROM payments
-        WHERE status = 'completed'
+        WHERE status IN ('captured', 'completed')
       `),
       pool.query('SELECT COUNT(*)::int AS total_reviews, COALESCE(ROUND(AVG(rating), 1), 0) AS average_rating FROM reviews'),
       pool.query('SELECT COUNT(*)::int AS total_messages, COUNT(*) FILTER (WHERE read = false)::int AS unread_messages FROM messages'),
@@ -89,7 +89,7 @@ router.get('/dashboard', async (req, res) => {
           COALESCE(SUM(amount), 0)::numeric(10,2) AS value
         FROM payments
         WHERE created_at >= NOW() - INTERVAL '5 months'
-          AND status = 'completed'
+          AND status IN ('captured', 'completed')
         GROUP BY DATE_TRUNC('month', created_at)
         ORDER BY DATE_TRUNC('month', created_at)
       `),
